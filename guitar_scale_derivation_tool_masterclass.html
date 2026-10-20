@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chord-to-Scale Masterclass & Interactive Mapper</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0b0f19',
+                        panelbg: 'rgba(23, 31, 51, 0.7)',
+                        panelborder: 'rgba(255, 255, 255, 0.08)',
+                        accent: '#6366f1',
+                        root: '#10b981',    <!-- Emerald for Root -->
+                        third: '#f59e0b',   <!-- Amber for 3rd -->
+                        fifth: '#06b6d4',   <!-- Cyan for 5th -->
+                        seventh: '#a855f7', <!-- Purple for 7th -->
+                        extension: '#f43f5e'<!-- Coral for Extensions -->
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styling and glassmorphism support */
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(20, 27, 45, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .fretboard-scroll {
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.2) transparent;
+        }
+        .fretboard-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+        .fretboard-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+        /* Custom Fretboard SVG / Node animations */
+        .fret-node {
+            transition: transform 0.15s ease, filter 0.15s ease;
+            cursor: pointer;
+        }
+        .fret-node:hover {
+            transform: scale(1.25);
+            filter: drop-shadow(0 0 8px currentColor);
+        }
+        /* Gradient Highlights */
+        .glow-text {
+            text-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Sticky Navigation Header -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-panelborder px-4 py-3 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-600/30 border border-indigo-500/40 rounded-lg">
+                    <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12 0c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400">
+                        Chord-to-Scale Mastery
+                    </h1>
+                    <p class="text-xs text-gray-400">Interactive Fretboard Engine & Harmonic Derivation Guide</p>
+                </div>
+            </div>
+
+            <!-- Page Switcher Tabs -->
+            <div class="flex p-1 bg-gray-900/80 rounded-xl border border-gray-800">
+                <button id="tab-btn-1" onclick="switchPage('page1')" class="px-5 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-md">
+                    1. Interactive Mapper
+                </button>
+                <button id="tab-btn-2" onclick="switchPage('page2')" class="px-5 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-lg transition-all duration-200">
+                    2. Masterclass Tutorial
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- ========================================================================= -->
+        <!-- PAGE 1: INTERACTIVE SCALE DERIVATION TOOL -->
+        <!-- ========================================================================= -->
+        <div id="page1" class="space-y-6">
+            
+            <!-- CONTROLS DASHBOARD -->
+            <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    
+                    <!-- 1. Key & Root Selector -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Key & Root Note</label>
+                        <select id="root-select" onchange="updateEngine()" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-indigo-300 font-semibold focus:outline-none focus:border-indigo-500">
+                            <option value="C">C</option>
+                            <option value="C#">C# / Db</option>
+                            <option value="D">D</option>
+                            <option value="D#">D# / Eb</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                            <option value="F#">F# / Gb</option>
+                            <option value="G">G</option>
+                            <option value="G#">G# / Ab</option>
+                            <option value="A" selected>A</option>
+                            <option value="A#">A# / Bb</option>
+                            <option value="B">B</option>
+                        </select>
+                    </div>
+
+                    <!-- 2. Base Chord Selector -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Base Chord Skeleton</label>
+                        <select id="chord-select" onchange="updateEngine()" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-amber-300 font-semibold focus:outline-none focus:border-amber-500">
+                            <optgroup label="Triads">
+                                <option value="maj">Major Triad (R-3-5)</option>
+                                <option value="min">Minor Triad (R-b3-5)</option>
+                                <option value="dim">Diminished (R-b3-b5)</option>
+                                <option value="aug">Augmented (R-3-#5)</option>
+                                <option value="sus2">Sus2 (R-2-5)</option>
+                                <option value="sus4">Sus4 (R-4-5)</option>
+                            </optgroup>
+                            <optgroup label="7th Chords">
+                                <option value="maj7">Major 7th (R-3-5-7)</option>
+                                <option value="dom7" selected>Dominant 7th (R-3-5-b7)</option>
+                                <option value="m7">Minor 7th (R-b3-5-b7)</option>
+                                <option value="m7b5">Half-Diminished / m7b5 (R-b3-b5-b7)</option>
+                                <option value="dim7">Diminished 7th (R-b3-b5-bb7)</option>
+                                <option value="mMaj7">Minor-Major 7th (R-b3-5-7)</option>
+                                <option value="7sus4">7sus4 (R-4-5-b7)</option>
+                            </optgroup>
+                            <optgroup label="Extended / Altered">
+                                <option value="dom9">Dominant 9th (R-3-5-b7-9)</option>
+                                <option value="m9">Minor 9th (R-b3-5-b7-9)</option>
+                                <option value="maj9">Major 9th (R-3-5-7-9)</option>
+                                <option value="7b9">7b9 (R-3-5-b7-b9)</option>
+                                <option value="7sharp9">7#9 (R-3-5-b7-#9)</option>
+                                <option value="7b5">7b5 (R-3-b5-b7)</option>
+                                <option value="7sharp5">7#5 (R-3-#5-b7)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- 3. CAGED Position Filter -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">CAGED Position Filter</label>
+                        <select id="caged-select" onchange="updateEngine()" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-emerald-300 font-semibold focus:outline-none focus:border-emerald-500">
+                            <option value="all" selected>All Fretboard (Full Scale)</option>
+                            <option value="C">C Shape Box (Frets 0-5)</option>
+                            <option value="A">A Shape Box (Frets 3-8)</option>
+                            <option value="G">G Shape Box (Frets 5-10)</option>
+                            <option value="E">E Shape Box (Frets 7-12)</option>
+                            <option value="D">D Shape Box (Frets 9-15)</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Target Scale Framework Options -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Target Derived Scale</label>
+                        <select id="scale-select" onchange="updateEngine()" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-cyan-300 font-semibold focus:outline-none focus:border-cyan-500">
+                            <optgroup label="Major Modes">
+                                <option value="ionian">Major / Ionian</option>
+                                <option value="dorian">Dorian Mode</option>
+                                <option value="phrygian">Phrygian Mode</option>
+                                <option value="lydian">Lydian Mode</option>
+                                <option value="mixolydian" selected>Mixolydian Mode</option>
+                                <option value="aeolian">Natural Minor / Aeolian</option>
+                                <option value="locrian">Locrian Mode</option>
+                            </optgroup>
+                            <optgroup label="Pentatonic & Blues">
+                                <option value="maj_pentatonic">Major Pentatonic</option>
+                                <option value="min_pentatonic">Minor Pentatonic</option>
+                                <option value="blues">Blues Scale</option>
+                            </optgroup>
+                            <optgroup label="Harmonic & Melodic Minor">
+                                <option value="harmonic_minor">Harmonic Minor</option>
+                                <option value="phrygian_dominant">Phrygian Dominant</option>
+                                <option value="melodic_minor">Melodic Minor</option>
+                                <option value="lydian_dominant">Lydian Dominant</option>
+                                <option value="altered">Altered / Super Locrian</option>
+                            </optgroup>
+                            <optgroup label="Symmetric / Exotic">
+                                <option value="diminished">Symmetrical Diminished (H-W)</option>
+                                <option value="whole_tone">Whole Tone</option>
+                                <option value="enigmatic">Enigmatic Scale</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Secondary Toggles & Audio Controls Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-panelborder">
+                    
+                    <!-- Audio Controls -->
+                    <div class="flex items-center gap-2">
+                        <button onclick="playAudioChord()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow flex items-center gap-2 transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></svg>
+                            Strum Chord
+                        </button>
+                        <button onclick="playAudioScale()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow flex items-center gap-2 transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></svg>
+                            Arpeggiate Scale
+                        </button>
+                    </div>
+
+                    <!-- Visual Toggles -->
+                    <div class="flex flex-wrap items-center gap-3 text-xs">
+                        <!-- Display Mode Toggle -->
+                        <div class="flex items-center bg-gray-900 rounded-lg p-1 border border-gray-800">
+                            <button id="toggle-names" onclick="setDisplayMode('names')" class="px-3 py-1 rounded-md text-white bg-gray-800 font-medium">Note Names</button>
+                            <button id="toggle-intervals" onclick="setDisplayMode('intervals')" class="px-3 py-1 rounded-md text-gray-400 hover:text-white font-medium">Interval Degrees</button>
+                        </div>
+
+                        <!-- Visibility Layer Filter -->
+                        <div class="flex items-center bg-gray-900 rounded-lg p-1 border border-gray-800">
+                            <button id="vis-all" onclick="setVisibilityMode('all')" class="px-3 py-1 rounded-md text-white bg-gray-800 font-medium">Chord + Passing Notes</button>
+                            <button id="vis-chord" onclick="setVisibilityMode('chord')" class="px-3 py-1 rounded-md text-gray-400 hover:text-white font-medium">Chord Skeleton Only</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- FORMULA GENERATOR & DERIVATION MATH PANEL -->
+            <div class="glass-panel p-5 rounded-2xl shadow-xl relative overflow-hidden">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <span class="text-xs font-bold tracking-widest text-indigo-400 uppercase">Scale Pitch Formula Generator</span>
+                        <h2 id="formula-title" class="text-lg font-bold text-white">A Dominant 7th &rarr; A Mixolydian Mode</h2>
+                        <p id="formula-desc" class="text-xs text-gray-300">Adding passing extensions 9, 11, and 13 into the dominant chord skeleton.</p>
+                    </div>
+
+                    <!-- Dynamic Visual Math Formula -->
+                    <div class="flex flex-wrap items-center gap-2 bg-gray-950/80 p-3 rounded-xl border border-gray-800 text-xs sm:text-sm font-mono">
+                        <div class="flex flex-col items-center">
+                            <span class="text-gray-400 text-[10px]">Chord Skeleton</span>
+                            <span id="chord-formula-badge" class="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-md font-bold">R - 3 - 5 - b7</span>
+                        </div>
+                        <span class="text-gray-500 font-bold text-lg">+</span>
+                        <div class="flex flex-col items-center">
+                            <span class="text-gray-400 text-[10px]">Added Extensions</span>
+                            <span id="extensions-formula-badge" class="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded-md font-bold">9 - 11 - 13</span>
+                        </div>
+                        <span class="text-gray-500 font-bold text-lg">=</span>
+                        <div class="flex flex-col items-center">
+                            <span class="text-gray-400 text-[10px]">Full Derived Scale</span>
+                            <span id="scale-formula-badge" class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-md font-bold">R - 2 - 3 - 4 - 5 - 6 - b7</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note Color Legend -->
+                <div class="mt-4 pt-3 border-t border-panelborder/50 flex flex-wrap items-center gap-4 text-xs">
+                    <span class="text-gray-400 font-medium">Interval Color Key:</span>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow"></span><span class="text-gray-300">Root (R)</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block shadow"></span><span class="text-gray-300">3rd (Maj/Min)</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-cyan-500 inline-block shadow"></span><span class="text-gray-300">5th (Perfect/Alt)</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-purple-500 inline-block shadow"></span><span class="text-gray-300">7th (Maj/Dom/Dim)</span></div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block shadow"></span><span class="text-gray-300">Extension / Passing Note</span></div>
+                </div>
+            </div>
+
+            <!-- INTERACTIVE 24-FRETBOARD CONTAINER -->
+            <div class="glass-panel p-4 md:p-6 rounded-2xl shadow-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V5l12-2v12M9 17l12-2M9 5l12-2"></path></svg>
+                        Interactive 24-Fret Fretboard Display
+                    </h3>
+                    <span class="text-xs text-gray-400 hidden sm:inline">Click any node to play sound</span>
+                </div>
+
+                <!-- SVG Fretboard Render Target -->
+                <div class="fretboard-scroll bg-gray-950/90 rounded-xl p-3 border border-gray-800">
+                    <div id="fretboard-container" class="min-w-[900px]">
+                        <!-- Rendered dynamically by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- PAGE 2: MASTERCLASS TUTORIAL - DERIVING SCALES FROM CHORDS -->
+        <!-- ========================================================================= -->
+        <div id="page2" class="space-y-8 hidden">
+            
+            <!-- MASTERCLASS HERO HEADER -->
+            <div class="glass-panel p-8 rounded-2xl shadow-xl relative overflow-hidden bg-gradient-to-r from-indigo-950/50 via-purple-950/30 to-gray-900 border border-indigo-500/20">
+                <div class="max-w-3xl space-y-3">
+                    <span class="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-full text-xs font-semibold tracking-wider uppercase">Masterclass Tutorial</span>
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+                        Deriving Guitar Scales Directly From Chords
+                    </h1>
+                    <p class="text-gray-300 text-sm md:text-base leading-relaxed">
+                        Stop memorizing disconnected, endless scale patterns across the neck. Learn how world-class improvisers use chord voicings as harmonic anchors to derive rich scale colors instantly.
+                    </p>
+                </div>
+            </div>
+
+            <!-- SECTION 1: THE CORE PHILOSOPHY -->
+            <section class="glass-panel p-6 rounded-2xl shadow-lg space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-sm">1</span>
+                    <h2 class="text-xl font-bold text-white">The Core Philosophy: Ending "Scale Wandering"</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-300 leading-relaxed">
+                    <p>
+                        Most beginner and intermediate guitarists approach solos by memorizing static scale shapes (like Minor Pentatonic Box 1). When playing over a backing track, they run up and down the box, hoping to hit good notes. This results in aimless, mechanical "scale wandering."
+                    </p>
+                    <p>
+                        <strong class="text-white">The Chord-Tone Target Strategy:</strong> Great improvisers flip this upside down. They view the background chord as the primary map. A chord is simply a condensed scale; a scale is simply an expanded chord. When you ground your solos in chord tones (1, 3, 5, 7), every line sounds intentional, melodic, and deeply connected to the harmony.
+                    </p>
+                </div>
+            </section>
+
+            <!-- SECTION 2: THE CHORD TONE FRAMEWORK -->
+            <section class="glass-panel p-6 rounded-2xl shadow-lg space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-sm">2</span>
+                    <h2 class="text-xl font-bold text-white">The Harmonic Skeleton (Triads to Extensions)</h2>
+                </div>
+                <p class="text-sm text-gray-300 leading-relaxed">
+                    Every scale is constructed around a basic chord triad or 7th chord structure. Think of the chord notes as the solid steel frame of a skyscraper, and the scale notes as the glass windows added in between.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
+                    <div class="p-4 bg-gray-900/80 rounded-xl border border-gray-800 space-y-2">
+                        <span class="text-emerald-400 font-bold block text-sm">Level 1: Triads</span>
+                        <p class="text-gray-400">Root + 3rd + 5th</p>
+                        <p class="text-gray-300">Provides core tonal foundation (Major/Minor clarity).</p>
+                    </div>
+                    <div class="p-4 bg-gray-900/80 rounded-xl border border-gray-800 space-y-2">
+                        <span class="text-amber-400 font-bold block text-sm">Level 2: 7th Chords</span>
+                        <p class="text-gray-400">Root + 3rd + 5th + 7th</p>
+                        <p class="text-gray-300">Adds stylistic flavor (Jazz, Blues, Soul sophistication).</p>
+                    </div>
+                    <div class="p-4 bg-gray-900/80 rounded-xl border border-gray-800 space-y-2">
+                        <span class="text-rose-400 font-bold block text-sm">Level 3: Full Scales</span>
+                        <p class="text-gray-400">Chord Tones + (9th + 11th + 13th)</p>
+                        <p class="text-gray-300">Fills the gaps with smooth passing steps & color tones.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: THE 3 PRIMARY DERIVATION METHODS -->
+            <section class="glass-panel p-6 rounded-2xl shadow-lg space-y-6">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-sm">3</span>
+                    <h2 class="text-xl font-bold text-white">The 3 Derivation Methods</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-5 bg-gray-900/60 rounded-xl border border-gray-800 space-y-3">
+                        <div class="text-indigo-400 font-bold text-base flex items-center gap-2">
+                            <span class="p-1.5 bg-indigo-500/20 rounded-md">Method 1</span>
+                            Fill-In-The-Gaps
+                        </div>
+                        <p class="text-xs text-gray-300 leading-relaxed">
+                            Take a 4-note chord like C Maj7 (<span class="text-emerald-400 font-mono">C E G B</span>). Add step-wise scalar notes (2, 4, 6) between those gaps to instantly create the 7-note C Ionian Scale (<span class="text-indigo-300 font-mono">C D E F G A B</span>).
+                        </p>
+                    </div>
+
+                    <div class="p-5 bg-gray-900/60 rounded-xl border border-gray-800 space-y-3">
+                        <div class="text-amber-400 font-bold text-base flex items-center gap-2">
+                            <span class="p-1.5 bg-amber-500/20 rounded-md">Method 2</span>
+                            Modal Color Extension
+                        </div>
+                        <p class="text-xs text-gray-300 leading-relaxed">
+                            Swap standard passing notes for distinct modal extensions. For example, over a Maj7 chord, adding a <strong class="text-amber-300">#11 (#4)</strong> extension transforms a standard Major scale into the lush, exotic <strong class="text-white">Lydian Mode</strong>.
+                        </p>
+                    </div>
+
+                    <div class="p-5 bg-gray-900/60 rounded-xl border border-gray-800 space-y-3">
+                        <div class="text-rose-400 font-bold text-base flex items-center gap-2">
+                            <span class="p-1.5 bg-rose-500/20 rounded-md">Method 3</span>
+                            Altered & Tension Method
+                        </div>
+                        <p class="text-xs text-gray-300 leading-relaxed">
+                            Over Dominant 7th chords, intentionally alter 5ths and 9ths (<span class="text-rose-300 font-mono">b9, #9, b5, #5</span>) to unlock tension-heavy scale choices like <strong class="text-white">Phrygian Dominant</strong> or the <strong class="text-white">Altered Scale</strong>.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: CAGED FRETBOARD VISUALIZATION -->
+            <section class="glass-panel p-6 rounded-2xl shadow-lg space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-sm">4</span>
+                    <h2 class="text-xl font-bold text-white">Visualizing CAGED Anchors on the Neck</h2>
+                </div>
+                <p class="text-sm text-gray-300 leading-relaxed">
+                    Instead of seeing individual notes, visualize chord shapes as physical hand-grips on the fretboard. When you grab an E-shape or A-shape chord, the passing scale notes naturally cluster directly around your finger positions.
+                </p>
+                <div class="p-4 bg-gray-950 rounded-xl border border-gray-800 flex flex-wrap items-center justify-around gap-4 text-center">
+                    <div class="space-y-1">
+                        <span class="text-emerald-400 text-xs font-bold block">C SHAPE</span>
+                        <span class="text-gray-400 text-xs">Frets 0-4 Anchor</span>
+                    </div>
+                    <div class="text-gray-600">&rarr;</div>
+                    <div class="space-y-1">
+                        <span class="text-emerald-400 text-xs font-bold block">A SHAPE</span>
+                        <span class="text-gray-400 text-xs">Frets 3-7 Anchor</span>
+                    </div>
+                    <div class="text-gray-600">&rarr;</div>
+                    <div class="space-y-1">
+                        <span class="text-emerald-400 text-xs font-bold block">G SHAPE</span>
+                        <span class="text-gray-400 text-xs">Frets 5-9 Anchor</span>
+                    </div>
+                    <div class="text-gray-600">&rarr;</div>
+                    <div class="space-y-1">
+                        <span class="text-emerald-400 text-xs font-bold block">E SHAPE</span>
+                        <span class="text-gray-400 text-xs">Frets 7-11 Anchor</span>
+                    </div>
+                    <div class="text-gray-600">&rarr;</div>
+                    <div class="space-y-1">
+                        <span class="text-emerald-400 text-xs font-bold block">D SHAPE</span>
+                        <span class="text-gray-400 text-xs">Frets 9-14 Anchor</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5: PRACTICAL INTERACTIVE DEMOS WITH AUDIO -->
+            <section class="glass-panel p-6 rounded-2xl shadow-lg space-y-6">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-sm">5</span>
+                    <h2 class="text-xl font-bold text-white">Interactive Step-by-Step Audio Demos</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- DEMO 1 -->
+                    <div class="p-4 bg-gray-900/80 rounded-xl border border-gray-800 space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-white text-base">Example 1: C Major 7 &rarr; C Lydian</h3>
+                                <p class="text-xs text-gray-400">The #4 Bright Dreamy Extension</p>
+                            </div>
+                            <button onclick="demoPlay('C', 'maj7', 'lydian')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition">
+                                Load In Engine
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-300">
+                            Starting from C Maj7 (<span class="text-amber-400">C-E-G-B</span>), adding F# (#4) creates the ethereal Lydian mode used heavily in film scores and modern fusion guitar.
+                        </p>
+                    </div>
+
+                    <!-- DEMO 2 -->
+                    <div class="p-4 bg-gray-900/80 rounded-xl border border-gray-800 space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-white text-base">Example 2: A Minor 7 &rarr; A Dorian</h3>
+                                <p class="text-xs text-gray-400">Natural 6th vs b6th (Dorian vs Aeolian)</p>
+                            </div>
+                            <button onclick="demoPlay('A', 'm7', 'dorian')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition">
+                                Load In Engine
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-300">
+                            A Minor 7 (<span class="text-amber-400">A-C-E-G</span>). Adding F (Natural 6th) gives the upbeat, Santana-style Dorian soloing sound instead of dark Aeolian.
+                        </p>
+                    </div>
+
+                    <!-- DEMO 3 -->
+                    <div class="p-4 bg-gray-900/80 rounded-xl border border-gray-800 space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-white text-base">Example 3: G7b9 &rarr; G Phrygian Dominant</h3>
+                                <p class="text-xs text-gray-400">Spanish / Flamenco Dominant Tension</p>
+                            </div>
+                            <button onclick="demoPlay('G', '7b9', 'phrygian_dominant')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition">
+                                Load In Engine
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-300">
+                            By adding Ab (b9) and C (11) into G7 (<span class="text-amber-400">G-B-D-F</span>), we unlock the exotic, spicy Phrygian Dominant scale favorite of Neoclassical rock.
+                        </p>
+                    </div>
+
+                    <!-- DEMO 4 -->
+                    <div class="p-4 bg-gray-900/80 rounded-xl border border-gray-800 space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-white text-base">Example 4: E Minor &rarr; E Blues & Dorian</h3>
+                                <p class="text-xs text-gray-400">Evolution of a Rock & Blues Lead</p>
+                            </div>
+                            <button onclick="demoPlay('E', 'min', 'blues')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition">
+                                Load In Engine
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-300">
+                            Watch how an E minor triad skeleton transforms into E Minor Pentatonic, gets a blue note (Bb) for the Blues Scale, and expands into E Dorian.
+                        </p>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- SECTION 6: DAILY DRILLS & EXERCISES -->
+            <section class="glass-panel p-6 rounded-2xl shadow-lg space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-sm">6</span>
+                    <h2 class="text-xl font-bold text-white">Daily Practical Guitar Drills</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-gray-300">
+                    <div class="p-4 bg-gray-900/60 rounded-xl border border-gray-800 space-y-2">
+                        <span class="font-bold text-emerald-400 block text-sm">Drill 1: Arpeggio Anchor Isolation</span>
+                        <p>Pick a CAGED chord shape. Play only the chord arpeggio up and down. Then play the full derived scale, but land and rest on a chord tone whenever the chord changes.</p>
+                    </div>
+                    <div class="p-4 bg-gray-900/60 rounded-xl border border-gray-800 space-y-2">
+                        <span class="font-bold text-indigo-400 block text-sm">Drill 2: Single-Extension Targeting</span>
+                        <p>Select a mode like Lydian or Dorian. Target specifically the signature color note (#4 or Natural 6th) over every chord progression to train your ear to hear modal colors.</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-panel border-t border-panelborder py-4 mt-auto text-center text-xs text-gray-500">
+        <p>Chord-to-Scale Guitar Engine & Masterclass &bull; Web Audio API Synthesizer Included</p>
+    </footer>
+
+    <!-- ========================================================================= -->
+    <!-- JAVASCRIPT ENGINE & LOGIC -->
+    <!-- ========================================================================= -->
+    <script>
+        // -------------------------------------------------------------------------
+        // MUSIC THEORY DATA ARCHITECTURE
+        // -------------------------------------------------------------------------
+        const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        
+        // Guitar Standard Tuning (E2, A2, D3, G3, B3, E4)
+        const GUITAR_TUNING = [
+            { note: 'E', octave: 4 }, // High E (String 1)
+            { note: 'B', octave: 3 }, // B (String 2)
+            { note: 'G', octave: 3 }, // G (String 3)
+            { note: 'D', octave: 3 }, // D (String 4)
+            { note: 'A', octave: 2 }, // A (String 5)
+            { note: 'E', octave: 2 }  // Low E (String 6)
+        ];
+
+        // Standard Chords Formulas (Semitone Offsets and Interval Labels)
+        const CHORD_FORMULAS = {
+            'maj':      { semitones: [0, 4, 7],         intervals: ['R', '3', '5'],          type: ['root', 'third', 'fifth'] },
+            'min':      { semitones: [0, 3, 7],         intervals: ['R', 'b3', '5'],         type: ['root', 'third', 'fifth'] },
+            'dim':      { semitones: [0, 3, 6],         intervals: ['R', 'b3', 'b5'],        type: ['root', 'third', 'fifth'] },
+            'aug':      { semitones: [0, 4, 8],         intervals: ['R', '3', '#5'],         type: ['root', 'third', 'fifth'] },
+            'sus2':     { semitones: [0, 2, 7],         intervals: ['R', '2', '5'],          type: ['root', 'third', 'fifth'] },
+            'sus4':     { semitones: [0, 5, 7],         intervals: ['R', '4', '5'],          type: ['root', 'third', 'fifth'] },
+            'maj7':     { semitones: [0, 4, 7, 11],     intervals: ['R', '3', '5', '7'],     type: ['root', 'third', 'fifth', 'seventh'] },
+            'dom7':     { semitones: [0, 4, 7, 10],     intervals: ['R', '3', '5', 'b7'],    type: ['root', 'third', 'fifth', 'seventh'] },
+            'm7':       { semitones: [0, 3, 7, 10],     intervals: ['R', 'b3', '5', 'b7'],   type: ['root', 'third', 'fifth', 'seventh'] },
+            'm7b5':     { semitones: [0, 3, 6, 10],     intervals: ['R', 'b3', 'b5', 'b7'],  type: ['root', 'third', 'fifth', 'seventh'] },
+            'dim7':     { semitones: [0, 3, 6, 9],      intervals: ['R', 'b3', 'b5', 'bb7'], type: ['root', 'third', 'fifth', 'seventh'] },
+            'mMaj7':    { semitones: [0, 3, 7, 11],     intervals: ['R', 'b3', '5', '7'],    type: ['root', 'third', 'fifth', 'seventh'] },
+            '7sus4':    { semitones: [0, 5, 7, 10],     intervals: ['R', '4', '5', 'b7'],    type: ['root', 'third', 'fifth', 'seventh'] },
+            'dom9':     { semitones: [0, 4, 7, 10, 2],  intervals: ['R', '3', '5', 'b7', '9'], type: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+            'm9':       { semitones: [0, 3, 7, 10, 2],  intervals: ['R', 'b3', '5', 'b7', '9'], type: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+            'maj9':     { semitones: [0, 4, 7, 11, 2],  intervals: ['R', '3', '5', '7', '9'], type: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+            '7b9':      { semitones: [0, 4, 7, 10, 1],  intervals: ['R', '3', '5', 'b7', 'b9'], type: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+            '7sharp9':  { semitones: [0, 4, 7, 10, 3],  intervals: ['R', '3', '5', 'b7', '#9'], type: ['root', 'third', 'fifth', 'seventh', 'extension'] },
+            '7b5':      { semitones: [0, 4, 6, 10],     intervals: ['R', '3', 'b5', 'b7'],   type: ['root', 'third', 'fifth', 'seventh'] },
+            '7sharp5':  { semitones: [0, 4, 8, 10],     intervals: ['R', '3', '#5', 'b7'],   type: ['root', 'third', 'fifth', 'seventh'] }
+        };
+
+        // Scale Definitions
+        const SCALE_FORMULAS = {
+            'ionian':            { semitones: [0, 2, 4, 5, 7, 9, 11],    intervals: ['R', '2', '3', '4', '5', '6', '7'] },
+            'dorian':            { semitones: [0, 2, 3, 5, 7, 9, 10],    intervals: ['R', '2', 'b3', '4', '5', '6', 'b7'] },
+            'phrygian':          { semitones: [0, 1, 3, 5, 7, 8, 10],    intervals: ['R', 'b2', 'b3', '4', '5', 'b6', 'b7'] },
+            'lydian':            { semitones: [0, 2, 4, 6, 7, 9, 11],    intervals: ['R', '2', '3', '#4', '5', '6', '7'] },
+            'mixolydian':        { semitones: [0, 2, 4, 5, 7, 9, 10],    intervals: ['R', '2', '3', '4', '5', '6', 'b7'] },
+            'aeolian':           { semitones: [0, 2, 3, 5, 7, 8, 10],    intervals: ['R', '2', 'b3', '4', '5', 'b6', 'b7'] },
+            'locrian':           { semitones: [0, 1, 3, 5, 6, 8, 10],    intervals: ['R', 'b2', 'b3', '4', 'b5', 'b6', 'b7'] },
+            'maj_pentatonic':    { semitones: [0, 2, 4, 7, 9],           intervals: ['R', '2', '3', '5', '6'] },
+            'min_pentatonic':    { semitones: [0, 3, 5, 7, 10],          intervals: ['R', 'b3', '4', '5', 'b7'] },
+            'blues':             { semitones: [0, 3, 5, 6, 7, 10],       intervals: ['R', 'b3', '4', 'b5', '5', 'b7'] },
+            'harmonic_minor':    { semitones: [0, 2, 3, 5, 7, 8, 11],    intervals: ['R', '2', 'b3', '4', '5', 'b6', '7'] },
+            'phrygian_dominant': { semitones: [0, 1, 4, 5, 7, 8, 10],    intervals: ['R', 'b2', '3', '4', '5', 'b6', 'b7'] },
+            'melodic_minor':     { semitones: [0, 2, 3, 5, 7, 9, 11],    intervals: ['R', '2', 'b3', '4', '5', '6', '7'] },
+            'lydian_dominant':   { semitones: [0, 2, 4, 6, 7, 9, 10],    intervals: ['R', '2', '3', '#4', '5', '6', 'b7'] },
+            'altered':           { semitones: [0, 1, 3, 4, 6, 8, 10],    intervals: ['R', 'b2', '#2', '3', 'b5', '#5', 'b7'] },
+            'diminished':        { semitones: [0, 1, 3, 4, 6, 7, 9, 10], intervals: ['R', 'b2', '#2', '3', '#4', '5', '6', 'b7'] },
+            'whole_tone':        { semitones: [0, 2, 4, 6, 8, 10],       intervals: ['R', '2', '3', '#4', '#5', 'b7'] },
+            'enigmatic':         { semitones: [0, 1, 4, 6, 8, 10, 11],   intervals: ['R', 'b2', '3', '#4', '#5', '#6', '7'] }
+        };
+
+        // CAGED Box Fret Ranges (Approximate boundaries)
+        const CAGED_BOXES = {
+            'all': [0, 24],
+            'C': [0, 5],
+            'A': [3, 8],
+            'G': [5, 10],
+            'E': [7, 12],
+            'D': [9, 15]
+        };
+
+        // Global State Variables
+        let displayMode = 'names'; // 'names' or 'intervals'
+        let visibilityMode = 'all'; // 'all' or 'chord'
+        let audioCtx = null;
+
+        // -------------------------------------------------------------------------
+        // WEB AUDIO SYNTHESIZER ENGINE
+        // -------------------------------------------------------------------------
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Frequency calculation: note index and octave to Hz
+        function getFrequency(noteName, octave) {
+            const noteIdx = NOTES.indexOf(noteName);
+            // A4 is 440Hz at Octave 4, Index 9
+            const midiNumber = (octave + 1) * 12 + noteIdx;
+            return 440 * Math.pow(2, (midiNumber - 69) / 12);
+        }
+
+        // Synthesize acoustic guitar-like pluck synth using Web Audio API
+        function playTone(freq, duration = 1.2, delay = 0) {
+            initAudio();
+            setTimeout(() => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+
+                // Triangle/Sawtooth mix for guitar pluck harmonic body
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                // Filter envelope for acoustic string damping
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(2800, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + duration);
+
+                // Amplitude envelope (pluck attack & decay)
+                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            }, delay * 1000);
+        }
+
+        // -------------------------------------------------------------------------
+        // ENGINE LOGIC & CALCULATIONS
+        // -------------------------------------------------------------------------
+        function getNoteByOffset(root, offset) {
+            const rootIndex = NOTES.indexOf(root);
+            return NOTES[(rootIndex + offset) % 12];
+        }
+
+        function updateEngine() {
+            const root = document.getElementById('root-select').value;
+            const chordKey = document.getElementById('chord-select').value;
+            const scaleKey = document.getElementById('scale-select').value;
+            const cagedKey = document.getElementById('caged-select').value;
+
+            const chordData = CHORD_FORMULAS[chordKey];
+            const scaleData = SCALE_FORMULAS[scaleKey];
+
+            // 1. Calculate Chord Notes & Intervals
+            const chordNotes = chordData.semitones.map((offset, idx) => ({
+                note: getNoteByOffset(root, offset),
+                interval: chordData.intervals[idx],
+                type: chordData.type[idx],
+                semitone: offset
+            }));
+
+            // 2. Calculate Scale Notes & Intervals
+            const scaleNotes = scaleData.semitones.map((offset, idx) => {
+                const note = getNoteByOffset(root, offset);
+                // Check if this scale note is part of core chord skeleton
+                const chordMatch = chordNotes.find(c => c.semitone === offset);
+                return {
+                    note: note,
+                    interval: scaleData.intervals[idx],
+                    type: chordMatch ? chordMatch.type : 'extension',
+                    isChordTone: !!chordMatch,
+                    semitone: offset
+                };
+            });
+
+            // 3. Update Formula UI
+            updateFormulaUI(root, chordKey, scaleKey, chordNotes, scaleNotes);
+
+            // 4. Render Fretboard
+            renderFretboard(root, scaleNotes, CAGED_BOXES[cagedKey]);
+        }
+
+        function updateFormulaUI(root, chordKey, scaleKey, chordNotes, scaleNotes) {
+            const chordName = document.getElementById('chord-select').options[document.getElementById('chord-select').selectedIndex].text;
+            const scaleName = document.getElementById('scale-select').options[document.getElementById('scale-select').selectedIndex].text;
+
+            document.getElementById('formula-title').innerText = `${root} ${chordName} \u2192 ${root} ${scaleName}`;
+            
+            // Chord Skeleton Badge
+            document.getElementById('chord-formula-badge').innerText = chordNotes.map(n => n.interval).join(' - ');
+
+            // Extensions (Passing Scale Notes not in chord)
+            const extNotes = scaleNotes.filter(n => !n.isChordTone);
+            document.getElementById('extensions-formula-badge').innerText = extNotes.length > 0 ? extNotes.map(n => n.interval).join(' - ') : 'None';
+
+            // Full Scale Badge
+            document.getElementById('scale-formula-badge').innerText = scaleNotes.map(n => n.interval).join(' - ');
+        }
+
+        // -------------------------------------------------------------------------
+        // SVG FRETBOARD RENDERER
+        // -------------------------------------------------------------------------
+        function renderFretboard(rootNote, scaleNotesMap, fretRange) {
+            const container = document.getElementById('fretboard-container');
+            const totalFrets = 24;
+            const width = 1100;
+            const height = 180;
+            const marginX = 40;
+            const marginY = 20;
+
+            const boardWidth = width - marginX * 2;
+            const boardHeight = height - marginY * 2;
+            const fretWidth = boardWidth / totalFrets;
+            const stringGap = boardHeight / 5;
+
+            let svg = `<svg viewBox="0 0 ${width} ${height}" class="w-full h-auto text-gray-400">`;
+
+            // Fretboard Wood Background
+            svg += `<rect x="${marginX}" y="${marginY}" width="${boardWidth}" height="${boardHeight}" fill="#181311" rx="4" stroke="#332922" stroke-width="2"/>`;
+
+            // Fret Markers (Dots on frets 3, 5, 7, 9, 12, 15, 17, 19, 21, 24)
+            const singleDots = [3, 5, 7, 9, 15, 17, 19, 21];
+            const doubleDots = [12, 24];
+
+            singleDots.forEach(fret => {
+                const x = marginX + (fret - 0.5) * fretWidth;
+                svg += `<circle cx="${x}" cy="${height / 2}" r="4" fill="#38302b"/>`;
+            });
+
+            doubleDots.forEach(fret => {
+                const x = marginX + (fret - 0.5) * fretWidth;
+                svg += `<circle cx="${x}" cy="${marginY + stringGap * 1.5}" r="3.5" fill="#38302b"/>`;
+                svg += `<circle cx="${x}" cy="${marginY + stringGap * 3.5}" r="3.5" fill="#38302b"/>`;
+            });
+
+            // Draw Frets (Metal lines)
+            for (let i = 0; i <= totalFrets; i++) {
+                const x = marginX + i * fretWidth;
+                const strokeWidth = i === 0 ? "5" : "2"; // Nut is thicker
+                const color = i === 0 ? "#e5e7eb" : "#4b5563";
+                svg += `<line x1="${x}" y1="${marginY}" x2="${x}" y2="${height - marginY}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+                
+                // Fret Numbers
+                if (i > 0) {
+                    svg += `<text x="${x - fretWidth / 2}" y="${height - 4}" fill="#6b7280" font-size="10" font-family="sans-serif" text-anchor="middle">${i}</text>`;
+                }
+            }
+
+            // Draw Strings (6 strings, Low E at bottom to High E at top)
+            for (let s = 0; s < 6; s++) {
+                const y = marginY + s * stringGap;
+                const thickness = 1 + (5 - s) * 0.4; // Low strings thicker
+                svg += `<line x1="${marginX}" y1="${y}" x2="${width - marginX}" y2="${y}" stroke="#9ca3af" stroke-width="${thickness}"/>`;
+            }
+
+            // Draw Scale & Chord Notes (Nodes)
+            GUITAR_TUNING.forEach((stringData, sIdx) => {
+                const y = marginY + sIdx * stringGap;
+                const openNoteIndex = NOTES.indexOf(stringData.note);
+
+                for (let fret = 0; fret <= totalFrets; fret++) {
+                    // Filter by CAGED Range
+                    if (fret < fretRange[0] || fret > fretRange[1]) continue;
+
+                    const noteName = NOTES[(openNoteIndex + fret) % 12];
+                    const matchedScaleNote = scaleNotesMap.find(n => n.note === noteName);
+
+                    if (matchedScaleNote) {
+                        // Check Visibility Filters
+                        if (visibilityMode === 'chord' && !matchedScaleNote.isChordTone) continue;
+
+                        const x = fret === 0 ? marginX - 15 : marginX + (fret - 0.5) * fretWidth;
+                        
+                        // Calculate Octave for Audio
+                        const totalSemitonesFromOpen = openNoteIndex + fret;
+                        const octave = stringData.octave + Math.floor(totalSemitonesFromOpen / 12);
+                        const frequency = getFrequency(noteName, octave);
+
+                        // Color Coding
+                        let fillColor = '#f43f5e'; // Extension / Coral
+                        if (matchedScaleNote.type === 'root') fillColor = '#10b981';      // Emerald
+                        else if (matchedScaleNote.type === 'third') fillColor = '#f59e0b'; // Amber
+                        else if (matchedScaleNote.type === 'fifth') fillColor = '#06b6d4'; // Cyan
+                        else if (matchedScaleNote.type === 'seventh') fillColor = '#a855f7'; // Purple
+
+                        const labelText = displayMode === 'names' ? noteName : matchedScaleNote.interval;
+
+                        svg += `
+                            <g class="fret-node" onclick="playTone(${frequency})" transform="translate(${x}, ${y})">
+                                <circle r="11" fill="${fillColor}" stroke="#111827" stroke-width="2"/>
+                                <text y="3.5" fill="#ffffff" font-size="9" font-weight="bold" font-family="sans-serif" text-anchor="middle">${labelText}</text>
+                            </g>
+                        `;
+                    }
+                }
+            });
+
+            svg += `</svg>`;
+            container.innerHTML = svg;
+        }
+
+        // -------------------------------------------------------------------------
+        // AUDIO PLAYBACK COMMANDS
+        // -------------------------------------------------------------------------
+        function playAudioChord() {
+            const root = document.getElementById('root-select').value;
+            const chordKey = document.getElementById('chord-select').value;
+            const chordData = CHORD_FORMULAS[chordKey];
+
+            initAudio();
+            chordData.semitones.forEach((offset, idx) => {
+                const noteName = getNoteByOffset(root, offset);
+                // Spread notes across octave 3 and 4 for chord strum
+                const octave = idx < 2 ? 3 : 4;
+                const freq = getFrequency(noteName, octave);
+                playTone(freq, 1.8, idx * 0.06); // Slight strum delay
+            });
+        }
+
+        function playAudioScale() {
+            const root = document.getElementById('root-select').value;
+            const scaleKey = document.getElementById('scale-select').value;
+            const scaleData = SCALE_FORMULAS[scaleKey];
+
+            initAudio();
+            
+            // Play scale up and down
+            const semitones = [...scaleData.semitones, 12]; // add octave
+            semitones.forEach((offset, idx) => {
+                const noteName = getNoteByOffset(root, offset % 12);
+                const octave = offset >= 12 ? 4 : 3;
+                const freq = getFrequency(noteName, octave);
+                playTone(freq, 0.8, idx * 0.22);
+            });
+        }
+
+        // -------------------------------------------------------------------------
+        // TOGGLES & NAVIGATION UI
+        // -------------------------------------------------------------------------
+        function setDisplayMode(mode) {
+            displayMode = mode;
+            document.getElementById('toggle-names').className = mode === 'names' 
+                ? "px-3 py-1 rounded-md text-white bg-gray-800 font-medium" 
+                : "px-3 py-1 rounded-md text-gray-400 hover:text-white font-medium";
+            document.getElementById('toggle-intervals').className = mode === 'intervals' 
+                ? "px-3 py-1 rounded-md text-white bg-gray-800 font-medium" 
+                : "px-3 py-1 rounded-md text-gray-400 hover:text-white font-medium";
+            updateEngine();
+        }
+
+        function setVisibilityMode(mode) {
+            visibilityMode = mode;
+            document.getElementById('vis-all').className = mode === 'all' 
+                ? "px-3 py-1 rounded-md text-white bg-gray-800 font-medium" 
+                : "px-3 py-1 rounded-md text-gray-400 hover:text-white font-medium";
+            document.getElementById('vis-chord').className = mode === 'chord' 
+                ? "px-3 py-1 rounded-md text-white bg-gray-800 font-medium" 
+                : "px-3 py-1 rounded-md text-gray-400 hover:text-white font-medium";
+            updateEngine();
+        }
+
+        function switchPage(pageId) {
+            document.getElementById('page1').classList.add('hidden');
+            document.getElementById('page2').classList.add('hidden');
+            document.getElementById(pageId).classList.remove('hidden');
+
+            const btn1 = document.getElementById('tab-btn-1');
+            const btn2 = document.getElementById('tab-btn-2');
+
+            if (pageId === 'page1') {
+                btn1.className = "px-5 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-md";
+                btn2.className = "px-5 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-lg transition-all duration-200";
+            } else {
+                btn2.className = "px-5 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-indigo-600 text-white shadow-md";
+                btn1.className = "px-5 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-lg transition-all duration-200";
+            }
+        }
+
+        function demoPlay(root, chord, scale) {
+            document.getElementById('root-select').value = root;
+            document.getElementById('chord-select').value = chord;
+            document.getElementById('scale-select').value = scale;
+            switchPage('page1');
+            updateEngine();
+            playAudioChord();
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            updateEngine();
+        };
+    </script>
+</body>
+</html>
